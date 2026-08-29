@@ -52,6 +52,20 @@ class LeetCodeSettings(BaseProjectSettings):
 
     DSA_PROBLEMS_ASSETS_DIR: Path = PROBLEMS_DATA_DIR / "assets"
 
+    # Tiny local cache remembering the last time SESSION/CSRF_TOKEN were
+    # confirmed valid (a hash of them, plus when — never the raw values), so
+    # LeetCodeClient.ensure_authenticated doesn't need a network round trip
+    # on every fresh CLI invocation. Personal machine state, not problem
+    # data — never commit this file (see .gitignore). See auth_cache.py.
+    AUTH_CACHE_PATH: Path = PROBLEMS_DATA_DIR / "auth_check_cache.json"
+
+    # How long a cached "yes, this session works" result is trusted before
+    # ensure_authenticated re-checks with LeetCode again. Deliberately short
+    # rather than "forever" — a session that's gone stale without SESSION/
+    # CSRF_TOKEN themselves changing would otherwise keep being trusted
+    # indefinitely. See LeetCodeClient.ensure_authenticated.
+    AUTH_CHECK_TTL_SECONDS: float = 3600.0
+
     # Non-DSA (Database/Shell/Concurrency/...) problem + submission records
     # that had already been fetched before ENDPOINT_ALL_PROBLEMS was scoped
     # to 'algorithms' only. Plain data dump, not a managed store — no CRUD

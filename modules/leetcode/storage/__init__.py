@@ -274,3 +274,17 @@ class LeetCodeDSAStorage:
     def remove_from_cache(self, slug: str) -> bool:
         """Manually drops a slug from the pending cache. Returns True if it was present."""
         return self.cache.remove_from_cache(slug)
+
+    def is_known_solved(self, slug: str) -> bool:
+        """
+        True if we already have independent confirmation `slug` is solved —
+        either it's tracked in the pending cache (only ever populated from
+        LeetCode's solved-list/recent-accepted feeds, both AC-only) or it
+        already has a stored submission (which wouldn't exist otherwise).
+
+        Used to tell a genuinely-empty submission list (e.g. a slug typed by
+        hand that was never actually solved) apart from a suspicious one
+        (LeetCode already told us this slug is solved, so an empty result
+        now contradicts that — see LeetCodeSyncManager.populate_submission_code).
+        """
+        return slug in self.cache.read_pending_cache() or self.submissions.exists(slug)

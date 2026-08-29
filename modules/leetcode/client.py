@@ -1,22 +1,116 @@
+import hashlib
+import time
 from typing import ClassVar
 
 import requests
 import structlog
 from urllib3.util import Retry
 
+from modules.leetcode.auth_cache import clear_auth_cache, load_auth_cache, save_auth_cache
 from modules.leetcode.rate_limiting import JitteredLimiterAdapter
 from modules.leetcode.settings import leetcode_settings
 
 logger = structlog.get_logger(__name__)
 
 
+class LeetCodeAuthenticationError(RuntimeError):
+    """Raised when LEETCODE_SESSION/LEETCODE_CSRF_TOKEN look invalid or
+    expired — see LeetCodeClient.ensure_authenticated. LeetCode's GraphQL API
+    doesn't reject a bad session with an HTTP error or a GraphQL 'errors'
+    entry; user-scoped fields (submissions, solved list, ...) just silently
+    resolve to null/empty instead, which would otherwise only surface much
+    later as a confusing crash deep in parsing code (e.g. len(None))."""
+
+
 class LeetCodeClient:
+    _AUTH_ERROR_MESSAGE = (
+        "LeetCode says you're not signed in — LEETCODE_SESSION/LEETCODE_CSRF_TOKEN "
+        "in .env look invalid or expired. Copy fresh values from an authenticated "
+        "browser session and try again."
+    )
+
     def __init__(self, settings=leetcode_settings):
         self.settings = settings
         self.session = requests.Session()
         self.graphql_url = f"{self.settings.BASE_URL}/graphql"
+        self._authenticated: bool | None = None
 
         self._setup_session()
+
+    def _credential_hash(self) -> str:
+        """One-way hash of the current SESSION+CSRF_TOKEN — identifies
+        *which* credentials a cached authentication result belongs to,
+        without ever writing the raw secrets to disk."""
+        raw = f"{self.settings.SESSION}:{self.settings.CSRF_TOKEN}"
+        return hashlib.sha256(raw.encode()).hexdigest()
+
+    def _probe_signed_in(self) -> bool:
+        """The actual network call: asks LeetCode directly whether the
+        current session is signed in."""
+        query = "query globalData { userStatus { isSignedIn } }"
+        try:
+            response = self.session.post(self.graphql_url, json={"query": query})
+            response.raise_for_status()
+            result = response.json()
+        except requests.exceptions.RequestException:
+            logger.exception("authentication_check_failed")
+            raise
+        return bool(
+            ((result.get("data") or {}).get("userStatus") or {}).get("isSignedIn")
+        )
+
+    def ensure_authenticated(self, force: bool = False) -> None:
+        """Verifies LEETCODE_SESSION/CSRF_TOKEN are actually valid before a
+        user-scoped request goes out.
+
+        Three layers of caching, cheapest first (skipped entirely when
+        force=True — used for a reactive re-check after an already-suspicious
+        result, see get_solved_questions/get_recent_ac_submissions/
+        LeetCodeSyncManager.populate_submission_code):
+        1. In-memory, per client instance — a batch run only ever pays for
+           one real check no matter how many slugs it processes.
+        2. On-disk (see auth_cache.py) — a fresh CLI process (a new client
+           instance) skips the check too, as long as SESSION/CSRF_TOKEN
+           haven't changed (credential hash still matches) and the cached
+           result isn't older than AUTH_CHECK_TTL_SECONDS. The TTL exists
+           because a session can go stale on LeetCode's side without the
+           .env values themselves ever changing — trusting a hash match
+           forever would silently miss exactly that case.
+        3. Otherwise: an actual network check, whose result updates both
+           caches — success refreshes the on-disk record (resets the TTL
+           clock); failure clears it, so a later, separate CLI invocation
+           within the old TTL window doesn't keep trusting a now-known-stale
+           record either.
+
+        Raises LeetCodeAuthenticationError if LeetCode says we're not signed in.
+        """
+        if not force:
+            if self._authenticated is not None:
+                if not self._authenticated:
+                    raise LeetCodeAuthenticationError(self._AUTH_ERROR_MESSAGE)
+                return
+
+            cached = load_auth_cache()
+            if cached and cached.get("credential_hash") == self._credential_hash():
+                age = time.time() - cached.get("verified_at", 0)
+                if age < self.settings.AUTH_CHECK_TTL_SECONDS:
+                    self._authenticated = True
+                    logger.info(
+                        "authentication_check_skipped",
+                        reason="cached_and_fresh",
+                        age_seconds=round(age),
+                    )
+                    return
+
+        signed_in = self._probe_signed_in()
+        self._authenticated = signed_in
+        if signed_in:
+            save_auth_cache(self._credential_hash(), time.time())
+        else:
+            clear_auth_cache()
+        logger.info("authentication_check_completed", signed_in=signed_in, forced=force)
+        if not signed_in:
+            raise LeetCodeAuthenticationError(self._AUTH_ERROR_MESSAGE)
 
     def _setup_session(self):
         # 1. Automatic Retries on HTTP 429 (Too Many Requests) or Server Errors (5xx)
@@ -84,6 +178,8 @@ class LeetCodeClient:
         solved on LeetCode but not yet fetched locally, without a per-slug
         GraphQL round trip.
         """
+        self.ensure_authenticated()
+
         url = self.settings.ENDPOINT_ALL_PROBLEMS
         logger.info("solved_questions_request_started", url=url)
 
@@ -113,6 +209,19 @@ class LeetCodeClient:
                     ),
                 }
             )
+
+        if not solved_problems:
+            # Coming back with zero solved problems is essentially always a
+            # dead session rather than reality (see LeetCodeSyncManager —
+            # this endpoint is the source of truth for "solved" in the first
+            # place). Force a live, uncached re-check to get a definitive
+            # answer rather than silently trusting "zero solved" — a
+            # genuinely brand-new account still comes through fine, since
+            # this only raises if LeetCode itself confirms we're logged out.
+            logger.warning(
+                "solved_questions_empty_result", action="forcing_auth_recheck"
+            )
+            self.ensure_authenticated(force=True)
 
         logger.info(
             "solved_questions_request_succeeded",
@@ -155,7 +264,7 @@ class LeetCodeClient:
             log.error("question_details_request_failed", errors=result["errors"])
             raise RuntimeError(f"GraphQL Error: {result['errors']}")
 
-        question = result.get("data", {}).get("question")
+        question = (result.get("data") or {}).get("question")
         if not question:
             log.warning("question_details_not_found")
         else:
@@ -165,6 +274,7 @@ class LeetCodeClient:
 
     def get_submission_list(self, slug: str, limit: int = 20) -> dict:
         """Queries LeetCode GraphQL to retrieve the submission history for a given problem."""
+        self.ensure_authenticated()
         log = logger.bind(slug=slug)
         query = """
         query submissionList($questionSlug: String!, $limit: Int, $offset: Int) {
@@ -220,6 +330,8 @@ class LeetCodeClient:
         Uses `username` if given, otherwise falls back to `LEETCODE_USERNAME`
         from settings. Raises ValueError if neither is available.
         """
+        self.ensure_authenticated()
+
         target_username = username or self.settings.USERNAME
         if not target_username:
             raise ValueError(
@@ -255,7 +367,17 @@ class LeetCodeClient:
             log.error("recent_ac_submissions_request_failed", errors=result["errors"])
             raise RuntimeError(f"GraphQL Error: {result['errors']}")
 
-        submissions = result.get("data", {}).get("recentAcSubmissionList", [])
+        submissions = (result.get("data") or {}).get("recentAcSubmissionList") or []
+        if not submissions:
+            # Same reasoning as get_solved_questions: a live re-check costs
+            # nothing when this is a genuinely quiet period (no false
+            # positive — it only raises if LeetCode confirms we're logged
+            # out), but catches a dead session that would otherwise look
+            # identical to "nothing recent to report".
+            log.warning(
+                "recent_ac_submissions_empty_result", action="forcing_auth_recheck"
+            )
+            self.ensure_authenticated(force=True)
         log.info(
             "recent_ac_submissions_request_succeeded", submission_count=len(submissions)
         )
@@ -264,6 +386,7 @@ class LeetCodeClient:
 
     def get_submission_details(self, submission_id: int) -> dict:
         """Queries LeetCode GraphQL to get full details and source code for a specific submission ID."""
+        self.ensure_authenticated()
         log = logger.bind(submission_id=submission_id)
         query = """
         query submissionDetails($submissionId: Int!) {

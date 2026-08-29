@@ -245,6 +245,21 @@ class LeetCodeSyncManager:
             accepted_submission_id = self._get_accepted_submission_id(submission_list)
 
             if not accepted_submission_id:
+                if self.storage.is_known_solved(slug):
+                    # LeetCode's own solved-list/recent-accepted feed already
+                    # told us this slug has an accepted submission — coming
+                    # back empty now contradicts that, so it's the session
+                    # going stale, not a real "not solved yet" case (see
+                    # is_known_solved). Force a live, uncached re-check
+                    # rather than silently believing this empty result.
+                    logger.warning(
+                        "submission_fetch_suspicious_empty_result",
+                        reason="slug_known_solved_but_no_accepted_submission_returned",
+                    )
+                    self.client.ensure_authenticated(force=True)
+                    # Still authenticated: a genuine (rare) inconsistency —
+                    # fall through to the normal "not found yet" handling
+                    # below, which just leaves the part pending for retry.
                 logger.warning(
                     "submission_fetch_failed", reason="no_accepted_submission_found"
                 )

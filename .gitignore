@@ -7,6 +7,11 @@ LOCAL_RENDER/
 # -journal sidecar files SQLite creates alongside the main .db file.
 LEETCODE_DATA/dsa_problems/submissions.db*
 
+# Local auth-check cache (a hash + timestamp, never the raw session/csrf
+# values) — machine-specific bookkeeping, not problem data. See
+# modules/leetcode/auth_cache.py.
+LEETCODE_DATA/dsa_problems/auth_check_cache.json*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

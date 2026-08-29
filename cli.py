@@ -12,6 +12,7 @@ Command implementations live in `modules/cli/`, split by area: problems
 
 from logging_config import configure_logging
 from modules.cli import cli
+from modules.leetcode.client import LeetCodeAuthenticationError
 
 # Fixed regardless of how this file is actually invoked (`python cli.py`,
 # `uv run python cli.py`, a symlink, ...), so shell tab-completion (see
@@ -21,4 +22,11 @@ PROG_NAME = "leetnotes"
 
 if __name__ == "__main__":
     configure_logging()
-    cli(prog_name=PROG_NAME)
+    # Caught here rather than in each command: LeetCodeAuthenticationError can
+    # surface from any command that touches an authenticated LeetCode
+    # endpoint (single-slug or deep inside a batch loop) — one place to turn
+    # it into a clean, non-crashing message instead of a raw traceback.
+    try:
+        cli(prog_name=PROG_NAME)
+    except LeetCodeAuthenticationError as exc:
+        raise SystemExit(f"Error: {exc}")
