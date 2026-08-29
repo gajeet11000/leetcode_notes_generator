@@ -68,7 +68,12 @@ class LeetCodeClient:
             domain="leetcode.com",
         )
 
-    _DIFFICULTY_LEVELS: ClassVar[dict[int, str]] = {0: "Unknown", 1: "Easy", 2: "Medium", 3: "Hard"}
+    _DIFFICULTY_LEVELS: ClassVar[dict[int, str]] = {
+        0: "Unknown",
+        1: "Easy",
+        2: "Medium",
+        3: "Hard",
+    }
 
     def get_solved_questions(self) -> list[dict]:
         """Fetches all solved problems ('ac' status) from the REST API endpoint.
@@ -201,10 +206,8 @@ class LeetCodeClient:
             raise RuntimeError(f"GraphQL Error: {result['errors']}")
 
         submissions = (
-            result.get("data", {})
-            .get("questionSubmissionList", {})
-            .get("submissions", [])
-        )
+            (result.get("data") or {}).get("questionSubmissionList") or {}
+        ).get("submissions") or []
         log.info("submission_list_request_succeeded", submission_count=len(submissions))
 
         return result
