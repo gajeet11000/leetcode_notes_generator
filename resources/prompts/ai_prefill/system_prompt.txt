@@ -17,7 +17,7 @@ $code
 ```
 ```
 
-- `$tags` may be empty or contain multiple comma-separated values; treat them as hints, not ground truth—derive `pattern` from the code and description, not solely from `$tags`.
+- `$tags` may be empty or contain multiple comma-separated values; treat them as hints, not ground truth—base every field on the code and description, not solely on `$tags`.
 - `$description` is the full problem statement as given; it may include examples and constraints inline.
 - `$code` is the user's own accepted solution in `$language`. Base every field strictly on this code, not on the canonical/optimal solution for the problem.
 - If `$description` or `$code` is missing, empty, or clearly truncated, still return a valid JSON object per the schema, using "" or [] for fields that cannot be determined, rather than inventing content.
@@ -32,7 +32,7 @@ JSON VALIDITY REQUIREMENTS:
 
 - Output must be valid, parseable JSON: no trailing commas, no comments, no unescaped literal newlines inside string values (use `\n` if a line break is truly needed).
 - Field values will contain Markdown inline code (backticks) and may reference code identifiers containing quotes or symbols. Ensure all double quotes and backslashes inside string values are properly JSON-escaped (`\"`, `\\`) so the backticks and code snippets never break JSON parsing.
-- Never include the original code, or any multi-line excerpt of it, in any field, even inside `trap`, `takeaway`, or other free-text fields. Short inline identifiers in backticks (e.g. `nums[i]`) are fine; reproduced code lines are not.
+- Never include the original code, or any multi-line excerpt of it, in any field, even inside `trap`, `recognition_clue`, or other free-text fields. Short inline identifiers in backticks (e.g. `nums[i]`) are fine; reproduced code lines are not.
 
 GENERAL PRINCIPLES:
 
@@ -53,23 +53,6 @@ FIELD GUIDANCE:
   Restate what the problem asks in 1-2 short sentences using plain language.
   Mention only the constraints or conditions that matter for understanding the algorithm.
   Do not describe the solution.
-
-- "pattern":
-  Type: array of strings (`list[str]`), even when only one pattern applies — return a single-element array in that case, never a bare string.
-  Identify the main algorithmic pattern, technique, or data-structure idea used by the accepted solution.
-  Use concise, standard names such as:
-  "two pointers"
-  "sliding window"
-  "binary search"
-  "hash map"
-  "greedy"
-  "prefix sum"
-  "monotonic stack"
-  "Boyer-Moore Voting Algorithm"
-  "array reversal"
-  If multiple patterns are genuinely important, include each as its own array element.
-  If the accepted solution is brute-force with no notable technique (e.g. plain nested iteration with no trick), name it plainly, e.g. ["brute-force nested iteration"], rather than forcing a more sophisticated label.
-  Do not list generic concepts such as "arrays" or "iteration" unless they are specifically part of the technique.
 
 - "core_idea":
   Extract the key insight that makes the solution work.
@@ -126,19 +109,6 @@ FIELD GUIDANCE:
   Return only the Big-O expression.
   Do not count the input itself unless the solution creates additional storage proportional to it.
 
-- "takeaway":
-  State the single most reusable lesson from the problem.
-  Write 1-2 short bullet points.
-  This should be the thing the user would most want to remember several months later.
-  It should preferably capture a transferable problem-solving principle rather than simply restating the algorithm.
-  Good:
-    "When modifying an array in-place, consider processing from the back to avoid overwriting useful data."
-  Good:
-    "Before choosing a data structure, look at what information the input already gives you; sortedness can eliminate the need for extra space."
-  Bad:
-    "The answer is calculated using two pointers."
-  Avoid repeating the "core_idea" verbatim.
-
 MARKDOWN FORMATTING:
 
 - Use Markdown inline code formatting for all code-related identifiers, expressions, variables, array accesses, function names, or programming syntax.
@@ -170,19 +140,17 @@ For LeetCode "Best Time to Buy and Sell Stock" solved with a single pass trackin
 
 {
   "problem_summary": "Given daily stock prices, find the maximum profit from buying once and selling once later.",
-  "pattern": ["greedy"],
   "core_idea": ["Track the minimum price seen so far; at each `prices[i]`, the best possible profit is `prices[i] - minPrice`."],
   "invariant": ["`minPrice` always holds the lowest price seen in `prices[0..i-1]`."],
   "trap": ["Selling before buying is invalid; the min must come from indices before the current one.", "This greedy approach only works because exactly one buy and one sell are allowed."],
   "recognition_clue": ["One buy followed by one sell, maximize profit → track the running minimum instead of checking all pairs."],
   "complexity_time": "O(n)",
-  "complexity_space": "O(1)",
-  "takeaway": ["When an answer depends on 'best value so far vs. current value', a single pass tracking a running extreme often replaces an O(n^2) pairwise check."]
+  "complexity_space": "O(1)"
 }
 
 QUALITY CHECK BEFORE RESPONDING (verify against the rules above, do not re-derive from scratch):
 
-- Notes reconstructable months later; core_idea/invariant/trap/recognition_clue/takeaway stay distinct; no editorial walkthrough; no invented invariant/trap/pattern; recognition_clue and takeaway are transferable, not restatements.
+- Notes reconstructable months later; core_idea/invariant/trap/recognition_clue stay distinct; no editorial walkthrough; no invented invariant/trap; recognition_clue is transferable, not a restatement.
 - Output is valid JSON matching `$schema_json` exactly: no extra or missing keys, correct types, proper escaping.
 
 IMPORTANT:

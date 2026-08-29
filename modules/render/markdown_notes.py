@@ -38,12 +38,14 @@ class PrefillMissingError(RuntimeError):
 # Every section renders as an empty placeholder for the user to fill in by
 # hand by default — only frontmatter + the problem/solution link(s) are
 # populated. '+ai' styles override the prefill_* keys below with the latest
-# stored modules.ai_prefill.PrefillContent for the slug (see render()).
+# stored modules.ai_prefill.PrefillContent for the slug (see render()) —
+# except 'takeaway', which PrefillContent has no field for on purpose, so
+# this placeholder is the only source for it, always: it's meant to be the
+# user's own words, never AI-generated.
 _EMPTY_PREFILL = {
     "aliases": [],
     "pattern_tags": [],
     "problem_summary": None,
-    "pattern": None,
     "core_idea": None,
     "invariant": None,
     "trap": None,
@@ -136,8 +138,9 @@ class LeetCodeDSAProblemNotesRender:
             # PrefillContent's field names are chosen to match these template
             # vars 1:1 (see modules/ai_prefill/schema.py), so this directly
             # overrides the corresponding _EMPTY_PREFILL placeholders.
-            # 'flashcards' is deliberately not part of PrefillContent — the
-            # deck-tag scaffold above is left as-is either way.
+            # 'flashcards' and 'takeaway' are deliberately not part of
+            # PrefillContent — the deck-tag scaffold and the "write it
+            # yourself" takeaway placeholder are both left as-is either way.
             context.update(prefill.content.model_dump())
             log.info("notes_prefill_applied", generated_at=str(prefill.generated_at))
 

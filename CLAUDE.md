@@ -151,8 +151,11 @@ directly instead (CLI: `problems data pending list/count/show`, vs. the always-l
 
 ### AI prefill (`modules/ai_prefill/`)
 
-Generates the personal study-notes content (pattern, core idea, invariant, trap, ...) via a
-pluggable CLI AI tool, instead of leaving it fully blank for hand-writing.
+Generates the personal study-notes content (core idea, invariant, trap, recognition clue, ...)
+via a pluggable CLI AI tool, instead of leaving it fully blank for hand-writing. Deliberately
+excludes the algorithmic pattern (that lives in frontmatter tags instead, not a prose section —
+see markdown_notes.py's `_tags`) and the final takeaway (always hand-written, never AI-generated
+— see `schema.PrefillContent` and `resources/templates/leetcode_notes_*.md.j2`).
 
 - `generator.py` — `AIPrefillGenerator`: builds a prompt (`prompt_builder.py`), calls the
   configured `AIProvider`, validates the JSON response against `schema.PrefillContent`, and
@@ -187,8 +190,8 @@ with broken/missing image links.
 `markdown_notes.py` (`LeetCodeDSAProblemNotesRender`) renders a separate, personal study-notes
 file per problem — frontmatter (tags = personal pattern tags + LeetCode topic-tag slugs,
 deduped) plus a link back to the rendered problem/solution file; the content sections
-(pattern, core idea, invariant, trap, ...) are left blank by default, or filled from the latest
-AI prefill content when rendered with `--ai` (see AI prefill above — the CLI's `notes render`
+(core idea, invariant, trap, recognition clue, ...) are left blank by default, or filled from
+the latest AI prefill content when rendered with `--ai` (see AI prefill above — the CLI's `notes render`
 generates prefill content on demand if none exists yet, so `PrefillMissingError` is only ever
 raised by lower-level, direct use of `LeetCodeDSAProblemNotesRender.render()`). Two base styles
 (`modules/render/utils.py::NotesStyle`: `plain`, `obsidian`), each with a `+ai` variant

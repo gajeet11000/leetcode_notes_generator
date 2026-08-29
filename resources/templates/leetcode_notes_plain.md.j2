@@ -1,10 +1,15 @@
 {# Personal study-notes template (plain Markdown, no Obsidian-specific syntax).
    Data vars (from the sync pipeline): frontend_id, slug, title, difficulty, url
    Tag var: tags — personal pattern tags + LeetCode question-tag slugs, combined
+     (the algorithmic pattern lives here, in frontmatter, not as its own body
+     section below — see _tags in markdown_notes.py)
    Linking vars: problem_note_name, problem_note_relpath
    Prefill vars (all optional — pass None/empty to leave blank for manual fill):
-     aliases, problem_summary, pattern, core_idea, invariant,
-     trap, recognition_clue, complexity_time, complexity_space, takeaway #}
+     aliases, problem_summary, core_idea, invariant, trap, recognition_clue,
+     complexity_time, complexity_space
+   takeaway is deliberately NOT a prefill var — always rendered blank, even
+   with --ai, since it's meant to be the user's own words (see
+   LeetCodeDSAProblemNotesRender.render) #}
 {% macro bullets(items) -%}
     {%- if items -%}
         {{ "- " ~ items | join("\n- ") }}
@@ -33,16 +38,14 @@ problem_link: "{{ url }}"
 {% else %}
     >
 {% endif %}
-**Pattern:**
-{{ bullets(pattern) }}
+**Recognition clue:**
+{{ bullets(recognition_clue) }}
 **Core idea:**
 {{ bullets(core_idea) }}
 **Invariant:**
 {{ bullets(invariant) }}
 **Trap:**
 {{ bullets(trap) }}
-**Recognition clue:**
-{{ bullets(recognition_clue) }}
 **Complexity:**
 - Time: `{{ complexity_time or '' }}`
 - Space: `{{ complexity_space or '' }}`

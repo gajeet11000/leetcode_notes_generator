@@ -4,8 +4,13 @@
    Linking vars: problem_link — vault-relative wikilink target (no extension)
      for the rendered problem/solution file
    Prefill vars (all optional — pass None/empty to leave blank for manual fill):
-     aliases, related, problem_summary, pattern, core_idea, invariant,
-     trap, recognition_clue, complexity_time, complexity_space, takeaway
+     aliases, related, problem_summary, core_idea, invariant, trap,
+     recognition_clue, complexity_time, complexity_space
+   (the algorithmic pattern lives in frontmatter tags above, not as its own
+   body section — see _tags in markdown_notes.py)
+   takeaway is deliberately NOT a prefill var — always rendered blank, even
+   with --ai, since it's meant to be the user's own words (see
+   LeetCodeDSAProblemNotesRender.render)
    flashcards: list[str], deterministic deck-tag scaffold for the Obsidian
      Spaced Repetition plugin — NOT part of AI prefill (see
      modules/render/markdown_notes.py::_flashcard_deck_tags): one
@@ -46,8 +51,8 @@ problem_link: "{{ url }}"
 **Problem:**
 > {{ problem_summary or '' }}
 
-**Pattern:**
-{{ bullets(pattern) }}
+**Recognition clue:**
+{{ bullets(recognition_clue) }}
 
 **Core idea:**
 {{ bullets(core_idea) }}
@@ -57,9 +62,6 @@ problem_link: "{{ url }}"
 
 **Trap:**
 {{ bullets(trap) }}
-
-**Recognition clue:**
-{{ bullets(recognition_clue) }}
 
 **Complexity:**
 - Time: `{{ complexity_time or 'O(?)' }}`

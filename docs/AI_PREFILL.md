@@ -1,9 +1,11 @@
 # AI Prefill
 
 This is the part of the project that writes a **first draft** of your study notes
-(pattern, core idea, invariant, trap, complexity, takeaway...) by asking an AI to read
+(core idea, invariant, trap, recognition clue, complexity...) by asking an AI to read
 the problem + your accepted solution and fill those sections in for you. You still
-review and rewrite it — it's a starting point, not the final note.
+review and rewrite it — it's a starting point, not the final note. The algorithmic
+pattern (frontmatter tags, not a prose section) and your final takeaway are never
+AI-generated — the takeaway in particular is meant to be your own words.
 
 It does **not** need an API key or any paid API access. By default it runs
 [Claude Code](https://claude.com/claude-code) itself in headless mode (`claude -p`),
