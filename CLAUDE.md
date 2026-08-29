@@ -175,32 +175,33 @@ version first (implies `--ai`).
 ### Rendering (`modules/render/`)
 
 `markdown_problem.py` (`LeetCodeDSAProblemMarkdownRender`) turns a `ProblemRecord`/
-`CombinedQuestionRecord` into a Markdown note via `resources/templates/leetcode_problem.md.j2`, in one or
-both of two variants (`modules/render/utils.py::FileVariant`):
-- `remote` — uses `content.remote_markdown` (hotlinked LeetCode image URLs)
-- `local` — uses `content.local_markdown` (rewritten to the locally-downloaded image paths)
-  and also copies that problem's `assets/` folder alongside the note.
+`CombinedQuestionRecord` into a single Markdown file via
+`resources/templates/leetcode_problem.md.j2`, always using `content.local_markdown`
+(locally-downloaded image paths) — there's no separate remote-image-links variant. Rendering
+assumes images are already downloaded successfully: if the question has images but none
+downloaded (or images haven't been fetched at all yet — see `ProblemRecord.images_populated`),
+`save()` raises `ImagesNotReadyError` instead of rendering, and the CLI (`problems render`,
+`notes render`) catches it to skip that problem with a clear message rather than writing a file
+with broken/missing image links.
 
 `markdown_notes.py` (`LeetCodeDSAProblemNotesRender`) renders a separate, personal study-notes
 file per problem — frontmatter (tags = personal pattern tags + LeetCode topic-tag slugs,
-deduped) plus a link back to the rendered problem/solution file(s); the content sections
+deduped) plus a link back to the rendered problem/solution file; the content sections
 (pattern, core idea, invariant, trap, ...) are left blank by default, or filled from the latest
 AI prefill content when rendered with `--ai` (see AI prefill above — the CLI's `notes render`
 generates prefill content on demand if none exists yet, so `PrefillMissingError` is only ever
 raised by lower-level, direct use of `LeetCodeDSAProblemNotesRender.render()`). Two base styles
 (`modules/render/utils.py::NotesStyle`: `plain`, `obsidian`), each with a `+ai` variant
 (`AI_STYLE` in the same module maps base -> `+ai`) — the CLI exposes these as independent
-`--style {plain,obsidian}` + `--ai` flags rather than four separate style choices. `obsidian`
-always links *both* the remote and local problem files via `[[wikilink]]`, using the path
-relative to `output_base` (disambiguating them, since they share a filename); `plain` links
-whichever single variant was actually rendered for that problem — local when the problem has
-downloaded images, remote otherwise.
+`--style {plain,obsidian}` + `--ai` flags rather than four separate style choices. Both styles
+link to the same single problem file — `obsidian` via `[[wikilink]]` (path relative to
+`output_base`), `plain` via a relative Markdown link.
 
 Both renderers write under one resolved base directory (`RendererSettings.resolve_base_dir()`
-— see Configuration above) in a fixed internal structure:
+— see Configuration above) in a flat internal structure — no per-problem subfolders:
 ```
-<base>/Leetcode Problems/remote/<file>.md
-<base>/Leetcode Problems/local/<slug>/<file>.md   (+ assets/)
+<base>/Leetcode Problems/<file>.md
+<base>/Leetcode Problems/assets/<slug>/...
 <base>/Leetcode Notes/<file>.md
 ```
 There's one notes file per problem regardless of style — regenerating with a different
