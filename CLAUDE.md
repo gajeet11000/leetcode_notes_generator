@@ -48,9 +48,13 @@ shared `model_config`. Every module-level settings class subclasses it and adds 
 - `modules/leetcode/settings.py` — `LeetCodeSettings` (`env_prefix="LEETCODE_"`): auth
   (`SESSION`, `CSRF_TOKEN` cookies copied from an authenticated browser session against
   leetcode.com, plus an optional `USERNAME` used only by the recent-accepted-submissions
-  query), and on-disk paths for the JSON "database" and cached assets under
-  `LEETCODE_DATA/dsa_problems/` — `problems.json`, `submissions.json`,
-  `solved_slugs_cache.json`, `assets/`.
+  query), and on-disk paths under `LEETCODE_DATA/dsa_problems/` — two separate SQLite files,
+  deliberately not one: `DSA_DB_PATH` (`leetcode.db` — problems/tags/pending-cache, community/
+  public data, safe to commit) and `SUBMISSIONS_DB_PATH` (`submissions.db` — personal solution
+  code, gitignored, never commit), plus `DSA_PROBLEMS_ASSETS_DIR` (`assets/`) for downloaded
+  images. Keeping submissions in their own file (not just their own table) means the file
+  that's safe to share can never end up carrying anyone's personal solutions — see
+  `modules/leetcode/storage/db.py`.
 - `modules/render/settings.py` — `RendererSettings`: template dir (`resources/templates/` at
   the repo root), default output dir (`LOCAL_RENDER/` in the project root), and an optional
   `OUTPUT_BASE_DIR` override (no `LEETCODE_` prefix — a different env var namespace than the

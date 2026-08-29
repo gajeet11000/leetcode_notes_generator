@@ -2,6 +2,10 @@
 logs/
 LOCAL_RENDER/
 
+# Personal LeetCode solution code — never commit (see
+# modules/leetcode/storage/db.py). Wildcard also covers the -wal/-shm/
+# -journal sidecar files SQLite creates alongside the main .db file.
+LEETCODE_DATA/dsa_problems/submissions.db*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
