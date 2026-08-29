@@ -39,9 +39,17 @@ class LeetCodeSettings(BaseProjectSettings):
     DATA_STORAGE_DIR: Path = BaseProjectSettings.PROJECT_ROOT_DIR / "LEETCODE_DATA"
     PROBLEMS_DATA_DIR: Path = DATA_STORAGE_DIR / "dsa_problems"
 
-    # Single SQLite file backing problems/tags/submissions/pending_cache —
-    # see modules/leetcode/storage/db.py for the schema and connection setup.
+    # SQLite file backing problems/tags/pending_cache — community/public
+    # data, safe to commit. See modules/leetcode/storage/db.py for the
+    # schema and connection setup.
     DSA_DB_PATH: Path = PROBLEMS_DATA_DIR / "leetcode.db"
+
+    # Separate SQLite file backing submissions only — personal solution
+    # code, kept out of DSA_DB_PATH on purpose so that file can safely be
+    # committed/shared without leaking anyone's solutions. Never commit
+    # this file (see .gitignore).
+    SUBMISSIONS_DB_PATH: Path = PROBLEMS_DATA_DIR / "submissions.db"
+
     DSA_PROBLEMS_ASSETS_DIR: Path = PROBLEMS_DATA_DIR / "assets"
 
     # Non-DSA (Database/Shell/Concurrency/...) problem + submission records
