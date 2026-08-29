@@ -65,13 +65,28 @@ FIELD GUIDANCE:
     "Loop through the array and check if the current element is equal to the previous element."
   The latter describes implementation rather than insight.
 
-- "invariant":
-  State the most important property that remains true during the algorithm.
-  Write 1-2 short bullet points.
-  Prefer a concrete invariant over a vague statement.
-  For two-pointer problems, describe what the processed prefix/suffix represents.
-  For greedy problems, describe what the maintained state represents.
-  If the solution does not have a meaningful or useful invariant, use an empty list rather than inventing one.
+- "invariant_statement":
+  Type: string (a single sentence), not a list.
+  First, identify the main loop in the accepted solution (if there are nested loops, focus on the outer loop unless the inner loop is where the real logic lives).
+  Then state what is true about the data every single time that loop is about to run its next iteration (or right before the loop condition is checked).
+  Avoid symbols and formal/mathematical notation — describe it the way you'd say it out loud.
+  Tie it to the actual variable names in the code, and make it clear which loop it's about (e.g. name the loop variable or the loop's condition).
+  No proof-speak ("by induction", "QED", "by hypothesis", etc.) anywhere in this field or the three below.
+  If the solution does not have a meaningful or useful invariant, use "" rather than inventing one — and leave invariant_initialization/invariant_maintenance/invariant_termination as empty lists too.
+
+- "invariant_initialization":
+  Type: array of strings (`list[str]`), up to 5 short bullets. Each bullet is one short, plain statement — not a multi-sentence paragraph.
+  Explain why "invariant_statement" is true before the loop runs even once — usually because of how variables are initialized, or because an empty/single-element input is trivially fine.
+  If there's a relevant edge case (empty input, single element, etc.), mention it as its own short bullet.
+
+- "invariant_maintenance":
+  Type: array of strings (`list[str]`), up to 5 short bullets. Each bullet is one short, plain statement — not a multi-sentence paragraph.
+  This is the core "why does this loop actually work" explanation: walk through one generic iteration and explain, in terms of what the code actually does (which variables change, what gets compared or updated), why "invariant_statement" is still true after that step, assuming it was true before.
+  Reference actual variables/operations from the code, not generic algorithm theory.
+
+- "invariant_termination":
+  Type: array of strings (`list[str]`), up to 5 short bullets. Each bullet is one short, plain statement — not a multi-sentence paragraph.
+  State the exact condition that makes the loop stop, and explain what that combined with "invariant_statement" tells us — specifically, why that guarantees the output/result is correct once the loop is done.
 
 - "trap":
   Identify the most likely conceptual mistakes, implementation mistakes, or important edge cases.
@@ -141,7 +156,10 @@ For LeetCode "Best Time to Buy and Sell Stock" solved with a single pass trackin
 {
   "problem_summary": "Given daily stock prices, find the maximum profit from buying once and selling once later.",
   "core_idea": ["Track the minimum price seen so far; at each `prices[i]`, the best possible profit is `prices[i] - minPrice`."],
-  "invariant": ["`minPrice` always holds the lowest price seen in `prices[0..i-1]`."],
+  "invariant_statement": "Every time the `for prices[i]` loop is about to run again, `minPrice` holds the lowest price seen among `prices[0..i-1]` and `maxProfit` holds the best profit achievable using only those prices.",
+  "invariant_initialization": ["Before the loop starts, `minPrice` is set to `prices[0]` and `maxProfit` to 0, which trivially satisfies the statement for the empty prefix `prices[0..-1]`."],
+  "invariant_maintenance": ["Each iteration first updates `maxProfit` using the current `prices[i] - minPrice`, then updates `minPrice` if `prices[i]` is smaller.", "Updating `maxProfit` before `minPrice` ensures the profit check always uses the minimum from strictly earlier indices, keeping the statement true for `prices[0..i]`."],
+  "invariant_termination": ["The loop stops once `i` reaches the end of `prices`.", "At that point the statement holds for the entire array, so `maxProfit` is the best profit achievable over all valid buy/sell pairs."],
   "trap": ["Selling before buying is invalid; the min must come from indices before the current one.", "This greedy approach only works because exactly one buy and one sell are allowed."],
   "recognition_clue": ["One buy followed by one sell, maximize profit → track the running minimum instead of checking all pairs."],
   "complexity_time": "O(n)",
@@ -150,7 +168,7 @@ For LeetCode "Best Time to Buy and Sell Stock" solved with a single pass trackin
 
 QUALITY CHECK BEFORE RESPONDING (verify against the rules above, do not re-derive from scratch):
 
-- Notes reconstructable months later; core_idea/invariant/trap/recognition_clue stay distinct; no editorial walkthrough; no invented invariant/trap; recognition_clue is transferable, not a restatement.
+- Notes reconstructable months later; core_idea/invariant_statement/invariant_initialization/invariant_maintenance/invariant_termination/trap/recognition_clue stay distinct; no editorial walkthrough; no invented invariant/trap; no proof-speak in the invariant fields; every invariant bullet is short and concrete, not a paragraph; recognition_clue is transferable, not a restatement.
 - Output is valid JSON matching `$schema_json` exactly: no extra or missing keys, correct types, proper escaping.
 
 IMPORTANT:

@@ -4,8 +4,12 @@
    Linking vars: problem_link — vault-relative wikilink target (no extension)
      for the rendered problem/solution file
    Prefill vars (all optional — pass None/empty to leave blank for manual fill):
-     aliases, related, problem_summary, core_idea, invariant, trap,
+     aliases, related, problem_summary, core_idea, trap,
      recognition_clue, complexity_time, complexity_space
+   Loop invariant vars: invariant_statement (single sentence), plus
+     invariant_initialization/invariant_maintenance/invariant_termination
+     (each up to 5 short bullets) — see the "invariant_*" FIELD GUIDANCE
+     blocks in resources/prompts/ai_prefill/system_prompt.txt
    (the algorithmic pattern lives in frontmatter tags above, not as its own
    body section — see _tags in markdown_notes.py)
    takeaway is deliberately NOT a prefill var — always rendered blank, even
@@ -57,8 +61,17 @@ problem_link: "{{ url }}"
 **Core idea:**
 {{ bullets(core_idea) }}
 
-**Invariant:**
-{{ bullets(invariant) }}
+**Loop Invariant:**
+*Statement:* {{ invariant_statement or '' }}
+
+*Initialization:*
+{{ bullets(invariant_initialization) }}
+
+*Maintenance:*
+{{ bullets(invariant_maintenance) }}
+
+*Termination:*
+{{ bullets(invariant_termination) }}
 
 **Trap:**
 {{ bullets(trap) }}

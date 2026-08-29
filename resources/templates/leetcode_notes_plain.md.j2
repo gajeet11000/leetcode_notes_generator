@@ -5,8 +5,12 @@
      section below — see _tags in markdown_notes.py)
    Linking vars: problem_note_name, problem_note_relpath
    Prefill vars (all optional — pass None/empty to leave blank for manual fill):
-     aliases, problem_summary, core_idea, invariant, trap, recognition_clue,
+     aliases, problem_summary, core_idea, trap, recognition_clue,
      complexity_time, complexity_space
+   Loop invariant vars: invariant_statement (single sentence), plus
+     invariant_initialization/invariant_maintenance/invariant_termination
+     (each up to 5 short bullets) — see the "invariant_*" FIELD GUIDANCE
+     blocks in resources/prompts/ai_prefill/system_prompt.txt
    takeaway is deliberately NOT a prefill var — always rendered blank, even
    with --ai, since it's meant to be the user's own words (see
    LeetCodeDSAProblemNotesRender.render) #}
@@ -42,8 +46,14 @@ problem_link: "{{ url }}"
 {{ bullets(recognition_clue) }}
 **Core idea:**
 {{ bullets(core_idea) }}
-**Invariant:**
-{{ bullets(invariant) }}
+**Loop Invariant:**
+*Statement:* {{ invariant_statement or '' }}
+*Initialization:*
+{{ bullets(invariant_initialization) }}
+*Maintenance:*
+{{ bullets(invariant_maintenance) }}
+*Termination:*
+{{ bullets(invariant_termination) }}
 **Trap:**
 {{ bullets(trap) }}
 **Complexity:**
