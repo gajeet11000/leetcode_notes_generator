@@ -37,7 +37,10 @@ from modules.ai_prefill import (
 )
 from modules.ai_prefill.settings import ai_prefill_settings
 from modules.render.markdown_notes import LeetCodeDSAProblemNotesRender
-from modules.render.markdown_problem import LeetCodeDSAProblemMarkdownRender
+from modules.render.markdown_problem import (
+    ImagesNotReadyError,
+    LeetCodeDSAProblemMarkdownRender,
+)
 from modules.render.settings import render_settings
 from modules.render.utils import AI_STYLE, NotesStyle
 from modules.sync.pipeline import LeetCodeSyncManager
@@ -165,8 +168,10 @@ def _generate_notes_for_slug(
     rate_limit_delay: float,
 ) -> str:
     """Runs the full pipeline for one slug. Returns the final notes save
-    status ('written'/'skipped'). Raises if problem metadata genuinely
-    couldn't be fetched — nothing downstream can proceed without it."""
+    status ('written'/'skipped') — 'skipped' also covers the problem's images
+    having failed to download, in which case prefill/notes are skipped too
+    (see ImagesNotReadyError). Raises if problem metadata genuinely couldn't
+    be fetched — nothing downstream can proceed without it."""
     log = logger.bind(slug=slug)
 
     description_status = run_part_for_slug(mgr, "description", slug, refetch=False)
@@ -182,7 +187,11 @@ def _generate_notes_for_slug(
     combined = mgr.storage.get_combined_by_slug(slug)
 
     click.echo("  -> render problem file")
-    LeetCodeDSAProblemMarkdownRender(output_base=output_base).save(combined)
+    try:
+        LeetCodeDSAProblemMarkdownRender(output_base=output_base).save(combined)
+    except ImagesNotReadyError as exc:
+        click.echo(f"  [skip] found error downloading '{slug}'s images — {exc}")
+        return "skipped"
 
     target_style = style
     if ai or regenerate_ai:

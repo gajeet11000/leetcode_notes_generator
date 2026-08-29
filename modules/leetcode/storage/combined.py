@@ -27,9 +27,9 @@ class CombinedQuestionRecord(BaseModel):
     submission: SubmissionRecord | None = None
 
     @property
-    def has_local_variant(self) -> bool:
-        """See ProblemRecord.has_local_variant — same logic, same fields."""
-        return bool(self.has_images) and bool(self.imgs_local_paths)
+    def images_populated(self) -> bool:
+        """See ProblemRecord.images_populated — same logic, same fields."""
+        return self.has_images is False or bool(self.imgs_local_paths)
 
     @classmethod
     def from_parts(

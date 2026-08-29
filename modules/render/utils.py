@@ -2,11 +2,6 @@ from enum import StrEnum
 from pathlib import Path
 
 
-class FileVariant(StrEnum):
-    REMOTE = "remote"  # Will use the markdown with remote(internet) image urls
-    LOCAL = "local"  # Will use the markdown with locally saved image urls(local relative paths)
-
-
 class NotesStyle(StrEnum):
     PLAIN = "plain"  # Plain Markdown, no Obsidian syntax
     OBSIDIAN = "obsidian"  # Obsidian wikilinks + callouts
@@ -32,8 +27,18 @@ def sanitized_filename(frontend_id: int | None, title: str | None) -> str:
 
 
 def problems_root(base: Path) -> Path:
-    """<base>/Leetcode Problems — root for both the remote and local problem/solution files."""
+    """<base>/Leetcode Problems — flat: one <file>.md per problem directly in
+    here (no per-problem subfolder), plus a shared assets/ dir (see
+    problems_assets_dir)."""
     return base / "Leetcode Problems"
+
+
+def problems_assets_dir(base: Path, slug: str) -> Path:
+    """<base>/Leetcode Problems/assets/<slug> — this problem's downloaded
+    images, addressed by every problem file via the relative path
+    'assets/<slug>/<file>' baked into content.local_markdown/local_html at
+    fetch time (see modules/leetcode/image_processor.py)."""
+    return problems_root(base) / "assets" / slug
 
 
 def notes_root(base: Path) -> Path:

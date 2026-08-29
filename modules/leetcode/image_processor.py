@@ -135,7 +135,7 @@ class LeetCodeImageProcessor:
                 img.decompose()
                 continue
 
-            img["src"] = f"assets/{saved_path.name}"
+            img["src"] = f"assets/{slug}/{saved_path.name}"
 
             # Store relative to PROJECT_ROOT instead of the absolute filesystem path
             relative_saved_path = saved_path.relative_to(self.project_root)

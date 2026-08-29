@@ -11,7 +11,6 @@ from modules.leetcode.storage.combined import CombinedQuestionRecord
 
 from .settings import render_settings
 from .utils import (
-    FileVariant,
     NotesStyle,
     notes_root,
     problems_root,
@@ -79,17 +78,10 @@ class LeetCodeDSAProblemNotesRender:
 
         self.output_base.mkdir(parents=True, exist_ok=True)
 
-    def _problem_file_path(
-        self, record: CombinedQuestionRecord, variant: FileVariant
-    ) -> Path:
-        """Absolute path to this record's already-rendered problem/solution file, for one variant."""
+    def _problem_file_path(self, record: CombinedQuestionRecord) -> Path:
+        """Absolute path to this record's already-rendered problem/solution file."""
         filename = sanitized_filename(record.id, record.title)
-        root = problems_root(self.output_base)
-        if variant == FileVariant.LOCAL:
-            if not record.slug:
-                raise ValueError("question slug cannot be null")
-            return root / "local" / record.slug / filename
-        return root / "remote" / filename
+        return problems_root(self.output_base) / filename
 
     def _tags(self, record: CombinedQuestionRecord) -> list[str]:
         """Personal pattern tags + LeetCode question-tag slugs, deduped, in one list."""
@@ -149,33 +141,17 @@ class LeetCodeDSAProblemNotesRender:
             context.update(prefill.content.model_dump())
             log.info("notes_prefill_applied", generated_at=str(prefill.generated_at))
 
+        problem_file = self._problem_file_path(record)
+        self._warn_if_missing(problem_file, log)
+
         if self.style in (NotesStyle.OBSIDIAN, NotesStyle.OBSIDIAN_AI):
-            # Obsidian wikilinks resolve relative to the vault root, not the note's
-            # own folder, and remote/local share the same filename — so both links
-            # need a full, disambiguating path from output_base (which, when the
-            # user points OUTPUT_BASE_DIR at their vault, IS the vault root).
-            remote_file = self._problem_file_path(record, FileVariant.REMOTE)
-            self._warn_if_missing(remote_file, log)
-            context["problem_remote_link"] = (
-                remote_file.relative_to(self.output_base).with_suffix("").as_posix()
+            # Obsidian wikilinks resolve relative to the vault root, not the
+            # note's own folder (which, when the user points OUTPUT_BASE_DIR
+            # at their vault, IS the vault root).
+            context["problem_link"] = (
+                problem_file.relative_to(self.output_base).with_suffix("").as_posix()
             )
-            if record.has_local_variant:
-                local_file = self._problem_file_path(record, FileVariant.LOCAL)
-                self._warn_if_missing(local_file, log)
-                context["problem_local_link"] = (
-                    local_file.relative_to(self.output_base).with_suffix("").as_posix()
-                )
-            else:
-                context["problem_local_link"] = None
         else:
-            # Always link whichever variant was actually rendered for this
-            # problem — local when it exists, remote otherwise. See
-            # CombinedQuestionRecord.has_local_variant.
-            variant = (
-                FileVariant.LOCAL if record.has_local_variant else FileVariant.REMOTE
-            )
-            problem_file = self._problem_file_path(record, variant)
-            self._warn_if_missing(problem_file, log)
             context["problem_note_name"] = problem_file.stem
             context["problem_note_relpath"] = os.path.relpath(
                 problem_file, start=notes_dir

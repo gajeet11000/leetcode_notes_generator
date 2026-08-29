@@ -8,10 +8,17 @@ from modules.leetcode.settings import leetcode_settings
 from modules.leetcode.storage.combined import CombinedQuestionRecord
 
 from .settings import render_settings
-from .utils import FileVariant as FV
-from .utils import problems_root, sanitized_filename
+from .utils import problems_assets_dir, problems_root, sanitized_filename
 
 logger = structlog.get_logger(__name__)
+
+
+class ImagesNotReadyError(RuntimeError):
+    """Raised when a question has images but none downloaded successfully
+    (or the images part hasn't run at all yet) — see
+    CombinedQuestionRecord.images_populated. Rendering assumes images are
+    already downloaded, so this problem is skipped rather than rendered with
+    broken/missing image links."""
 
 
 class LeetCodeDSAProblemMarkdownRender:
@@ -36,14 +43,11 @@ class LeetCodeDSAProblemMarkdownRender:
 
         self.output_base.mkdir(parents=True, exist_ok=True)
 
-    def render(self, record: CombinedQuestionRecord, variant: FV) -> str:
-        """Renders a CombinedQuestionRecord into a Markdown string for a specific variant."""
+    def render(self, record: CombinedQuestionRecord) -> str:
+        """Renders a CombinedQuestionRecord into a Markdown string, using the
+        locally-downloaded-images variant of the content — see
+        CombinedQuestionRecord.images_populated for the precondition."""
         log = logger.bind(slug=record.slug)
-        markdown_content = (
-            record.content.remote_markdown
-            if variant == FV.REMOTE
-            else record.content.local_markdown
-        )
         rendered = self.template.render(
             frontend_id=record.id,
             slug=record.slug,
@@ -51,89 +55,62 @@ class LeetCodeDSAProblemMarkdownRender:
             difficulty=record.difficulty,
             tags=record.tags,
             url=record.url,
-            content=markdown_content,
+            content=record.content.local_markdown,
             submission=record.submission,
         )
-        log.info(
-            "markdown_rendered",
-            variant=variant.value if hasattr(variant, "value") else str(variant),
-            has_submission=record.submission is not None,
-        )
+        log.info("markdown_rendered", has_submission=record.submission is not None)
         return rendered
 
     def _get_sanitized_filename(self, record: CombinedQuestionRecord) -> str:
         return sanitized_filename(record.id, record.title)
 
-    def _save_remote(self, record: CombinedQuestionRecord, root: Path) -> Path:
-        """Writes remote variant into <root>/remote/<file>.md."""
+    def _copy_assets(self, record: CombinedQuestionRecord) -> None:
+        """Copies this problem's downloaded images into
+        <output_base>/Leetcode Problems/assets/<slug>/, matching the relative
+        path baked into content.local_markdown at fetch time (see
+        image_processor.py). A no-op when the question has no images."""
+        if not record.has_images:
+            return
+
         log = logger.bind(slug=record.slug)
-        remote_dir = root / "remote"
-        remote_dir.mkdir(parents=True, exist_ok=True)
+        source_assets_dir = self.dsa_problems_assets_dir / record.slug
+        target_assets_dir = problems_assets_dir(self.output_base, record.slug)
 
-        output_file = remote_dir / self._get_sanitized_filename(record)
-        output_file.write_text(self.render(record, FV.REMOTE), encoding="utf-8")
-        log.info("variant_file_written", variant="remote", path=str(output_file))
-        return output_file
+        if target_assets_dir.exists():
+            shutil.rmtree(target_assets_dir)
+        shutil.copytree(source_assets_dir, target_assets_dir)
+        log.info(
+            "assets_copied", source=str(source_assets_dir), target=str(target_assets_dir)
+        )
 
-    def _save_local(self, record: CombinedQuestionRecord, root: Path) -> Path:
-        """Writes local variant into <root>/local/<slug>/<file>.md, with assets."""
+    def save(self, record: CombinedQuestionRecord) -> Path:
+        """
+        Renders and saves `record` to <output_base>/Leetcode Problems/<file>.md,
+        with its images (if any) copied to <output_base>/Leetcode Problems/assets/<slug>/.
+
+        Raises ImagesNotReadyError instead of rendering if the question has
+        images but none downloaded successfully yet (see
+        CombinedQuestionRecord.images_populated) — there's no remote-URL
+        fallback anymore, so a problem with broken/missing images is skipped
+        rather than silently rendered wrong.
+        """
         if not record.slug:
             raise ValueError("question slug cannot be null")
 
         log = logger.bind(slug=record.slug)
-        target_problem_dir = root / "local" / record.slug
-        target_problem_dir.mkdir(parents=True, exist_ok=True)
 
-        # Images live directly under DSA_PROBLEMS_ASSETS_DIR/<slug>/ (no nested
-        # "assets" folder on the source side — see image_processor.py) — that
-        # whole slug dir becomes this note's assets/ folder.
-        source_assets_dir = self.dsa_problems_assets_dir / record.slug
-
-        target_assets_dir = target_problem_dir / "assets"
-
-        if source_assets_dir.exists() and source_assets_dir.is_dir():
-            if target_assets_dir.exists():
-                shutil.rmtree(target_assets_dir)
-            shutil.copytree(source_assets_dir, target_assets_dir)
-            log.info(
-                "assets_copied",
-                source=str(source_assets_dir),
-                target=str(target_assets_dir),
+        if not record.images_populated:
+            raise ImagesNotReadyError(
+                f"images failed to download for '{record.slug}' — skipping render"
             )
-        else:
-            log.info("assets_copy_skipped", reason="no_local_assets_found")
 
-        output_file = target_problem_dir / self._get_sanitized_filename(record)
-        output_file.write_text(self.render(record, FV.LOCAL), encoding="utf-8")
-        log.info("variant_file_written", variant="local", path=str(output_file))
-        return output_file
-
-    def _save_variant(
-        self, record: CombinedQuestionRecord, variant: FV, root: Path
-    ) -> Path:
-        return (
-            self._save_local(record, root)
-            if variant == FV.LOCAL
-            else self._save_remote(record, root)
-        )
-
-    def save(self, record: CombinedQuestionRecord) -> dict:
-        """
-        Renders and saves `record` under <output_base>/Leetcode Problems/<variant>/....
-
-        Remote is always written. Local is written too only when the record
-        has a local variant worth having (see CombinedQuestionRecord.has_local_variant)
-        — otherwise it'd be a byte-for-byte duplicate of remote.
-
-        Returns e.g.: {"local": Path(...), "remote": Path(...)}
-        """
-        log = logger.bind(slug=record.slug)
-        variants = [FV.REMOTE, FV.LOCAL] if record.has_local_variant else [FV.REMOTE]
         root = problems_root(self.output_base)
+        root.mkdir(parents=True, exist_ok=True)
 
-        log.info("render_save_started", variants=[v.value for v in variants])
+        self._copy_assets(record)
 
-        results = {v.value: self._save_variant(record, v, root) for v in variants}
+        output_file = root / self._get_sanitized_filename(record)
+        output_file.write_text(self.render(record), encoding="utf-8")
 
-        log.info("render_save_completed", variants=list(results.keys()))
-        return results
+        log.info("render_save_completed", path=str(output_file))
+        return output_file

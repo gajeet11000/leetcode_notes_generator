@@ -195,8 +195,8 @@ uv run python cli.py -H                # everything, all at once
 ```
 LOCAL_RENDER/                          (or your own OUTPUT_BASE_DIR)
 ├── Leetcode Problems/
-│   ├── remote/...                     problem + solution files
-│   └── local/<problem>/...            same, with downloaded images
+│   ├── assets/<problem>/...           downloaded images, one folder per problem
+│   └── ...                            problem + solution files, one per problem
 └── Leetcode Notes/
     └── ...                            your personal study notes, one per problem
 ```

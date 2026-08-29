@@ -5,7 +5,10 @@ from pathlib import Path
 import click
 import structlog
 
-from modules.render.markdown_problem import LeetCodeDSAProblemMarkdownRender
+from modules.render.markdown_problem import (
+    ImagesNotReadyError,
+    LeetCodeDSAProblemMarkdownRender,
+)
 
 from .common import get_manager, print_batch_summary
 from .picker import label_records, pick_slugs
@@ -34,11 +37,14 @@ def problems_render(
     run_all: bool,
     output_base: Path | None,
 ) -> None:
-    """Render a stored question into Markdown.
+    """Render a stored question into Markdown, with its downloaded images
+    copied alongside (Leetcode Problems/assets/<slug>/).
 
-    Always writes the remote-image-links variant. Also writes a local variant
-    (with downloaded images copied alongside) when the problem actually has
-    images that were successfully downloaded — see ProblemRecord.has_local_variant.
+    If the question has images but none downloaded successfully (or images
+    haven't been fetched at all yet), this problem is skipped — not
+    rendered with broken image links — see ProblemRecord.images_populated
+    and 'problems data fetch --part images'.
+
     Omit both SLUG and --all to pick interactively instead — a searchable,
     multi-select prompt over every slug with problem data populated.
     """
@@ -58,7 +64,14 @@ def problems_render(
                     f"no problem data found for '{slug}', run 'problems data fetch {slug}' first"
                 )
             log.info("render_command_started")
-            renderer.save(record)
+            try:
+                renderer.save(record)
+            except ImagesNotReadyError as exc:
+                log.warning("render_command_skipped", reason="images_not_ready")
+                click.echo(
+                    f"[skip] found error downloading '{slug}'s images — {exc}"
+                )
+                return
             log.info("render_command_succeeded")
             click.echo(f"[done] rendered {slug}")
         return
@@ -89,11 +102,17 @@ def problems_render(
     logger.info(
         "render_command_batch_started", stage="render", record_count=len(records)
     )
-    succeeded, failed = [], []
+    succeeded, skipped, failed = [], [], []
     for record in records:
         with structlog.contextvars.bound_contextvars(slug=record.slug, stage="render"):
             try:
                 renderer.save(record)
+            except ImagesNotReadyError as exc:
+                logger.warning("render_command_skipped", reason="images_not_ready")
+                click.echo(
+                    f"[skip] found error downloading '{record.slug}'s images — {exc}"
+                )
+                skipped.append(record.slug)
             except Exception as exc:
                 logger.exception("render_command_failed")
                 click.echo(f"[fail] {record.slug}: {exc}")
@@ -107,6 +126,7 @@ def problems_render(
         "render_command_batch_completed",
         stage="render",
         succeeded_count=len(succeeded),
+        skipped_count=len(skipped),
         failed_count=len(failed),
     )
-    print_batch_summary(succeeded, failed)
+    print_batch_summary(succeeded, failed, skipped)
