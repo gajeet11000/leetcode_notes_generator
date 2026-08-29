@@ -10,7 +10,6 @@ SQLite table since this is one scalar record, not queryable data.
 """
 
 import json
-from pathlib import Path
 
 import structlog
 
@@ -28,7 +27,7 @@ def load_auth_cache() -> dict | None:
         return None
     try:
         return json.loads(path.read_text())
-    except (json.JSONDecodeError, OSError):
+    except json.JSONDecodeError, OSError:
         logger.warning("auth_cache_read_failed", path=str(path))
         return None
 

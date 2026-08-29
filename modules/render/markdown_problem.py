@@ -80,7 +80,9 @@ class LeetCodeDSAProblemMarkdownRender:
             shutil.rmtree(target_assets_dir)
         shutil.copytree(source_assets_dir, target_assets_dir)
         log.info(
-            "assets_copied", source=str(source_assets_dir), target=str(target_assets_dir)
+            "assets_copied",
+            source=str(source_assets_dir),
+            target=str(target_assets_dir),
         )
 
     def save(self, record: CombinedQuestionRecord) -> Path:

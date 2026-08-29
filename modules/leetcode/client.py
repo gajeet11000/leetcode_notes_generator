@@ -6,7 +6,11 @@ import requests
 import structlog
 from urllib3.util import Retry
 
-from modules.leetcode.auth_cache import clear_auth_cache, load_auth_cache, save_auth_cache
+from modules.leetcode.auth_cache import (
+    clear_auth_cache,
+    load_auth_cache,
+    save_auth_cache,
+)
 from modules.leetcode.rate_limiting import JitteredLimiterAdapter
 from modules.leetcode.settings import leetcode_settings
 

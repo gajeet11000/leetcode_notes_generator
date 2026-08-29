@@ -68,9 +68,7 @@ def problems_render(
                 renderer.save(record)
             except ImagesNotReadyError as exc:
                 log.warning("render_command_skipped", reason="images_not_ready")
-                click.echo(
-                    f"[skip] found error downloading '{slug}'s images — {exc}"
-                )
+                click.echo(f"[skip] found error downloading '{slug}'s images — {exc}")
                 return
             log.info("render_command_succeeded")
             click.echo(f"[done] rendered {slug}")
