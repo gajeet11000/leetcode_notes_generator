@@ -4,21 +4,21 @@ import structlog
 
 from modules.leetcode.models import SubmissionRecord
 
-from .db import get_connection
+from .db import get_submissions_connection
 
 logger = structlog.get_logger(__name__)
 
 
 class SubmissionStorage:
-    """SQLite-backed CRUD for SubmissionRecord data (the `submissions` table in leetcode.db).
+    """SQLite-backed CRUD for SubmissionRecord data (the `submissions` table in submissions.db).
 
     Personal solution data only (language, code, submission date) — kept in
-    its own table, deliberately without a foreign key to `problems` (see
-    db.py), and never exported.
+    its own file, separate from leetcode.db, deliberately without a foreign
+    key to `problems` (see db.py), and never exported/committed.
     """
 
     def __init__(self, conn: sqlite3.Connection | None = None):
-        self.conn = conn or get_connection()
+        self.conn = conn or get_submissions_connection()
 
     def _upsert_one(self, record: SubmissionRecord) -> None:
         self.conn.execute(

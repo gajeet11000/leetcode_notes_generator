@@ -4,7 +4,7 @@ from modules.leetcode.models import ProblemRecord, SubmissionRecord
 
 from .cache import PendingCacheStore
 from .combined import CombinedQuestionRecord
-from .db import get_connection
+from .db import get_connection, get_submissions_connection
 from .problems import ProblemStorage
 from .submissions import SubmissionStorage
 
@@ -17,27 +17,29 @@ class LeetCodeDSAStorage:
     """
     Facade over the problem store, submission store, and pending-parts cache.
 
-    All three share one leetcode.db SQLite connection (see db.py). Problem
-    data (community/public, safe to export — the `problems`/`tags`/
-    `problem_tags` tables) and submission data (personal, never exported —
-    the `submissions` table) are still kept in separate tables by
-    construction, same boundary as before, just tables instead of separate
-    JSON files now. Each store's CRUD is exposed here under a `problems_*` /
-    `submissions_*` prefix.
+    Problem data (community/public, safe to export/commit — the
+    `problems`/`tags`/`problem_tags`/`pending_cache` tables) lives in
+    leetcode.db; submission data (personal, never exported/committed — the
+    `submissions` table) lives in its own separate submissions.db, so the
+    two can never end up in the same committed file (see db.py). Each
+    store's CRUD is exposed here under a `problems_*` / `submissions_*`
+    prefix.
 
     A small set of unprefixed methods is kept for backward compatibility
     with existing callers and operates on the problems store only. Callers
     that need both problem and submission data together should use
     `get_combined_by_slug` / `list_all_combined` — the only place the two
-    stores are joined back into one view.
+    stores are joined back into one view (at the Python level — the two
+    tables no longer even share a database to join with SQL).
     """
 
     CACHE_PARTS = PendingCacheStore.CACHE_PARTS
 
     def __init__(self):
         self.conn = get_connection()
+        self.submissions_conn = get_submissions_connection()
         self.problems = ProblemStorage(self.conn)
-        self.submissions = SubmissionStorage(self.conn)
+        self.submissions = SubmissionStorage(self.submissions_conn)
         self.cache = PendingCacheStore(self.conn)
 
     # -------------------------------------------------------------------
