@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.14"
 license = { text = "MIT" }
 authors = [
-    { name = "Gajeet" },
+    { name = "G Ajeet" },
 ]
 keywords = ["leetcode", "notes", "obsidian", "dsa", "algorithms"]
 classifiers = [
