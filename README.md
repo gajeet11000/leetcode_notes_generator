@@ -190,7 +190,7 @@ uv run leetnotes notes render -h   # options for one specific command
 uv run leetnotes -H                # everything, all at once
 ```
 
-*(Note: `uv run python cli.py` also works as a backwards-compatible alias.)*
+*(Note: `uv run python -m leetnotes` also works as an alternative.)*
 
 ## Where your files end up
 

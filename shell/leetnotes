@@ -1,5 +1,5 @@
 #!/bin/sh
-# Wrapper executable for this project's CLI (cli.py), under a short, fixed
+# Wrapper executable for this project's CLI, under a short, fixed
 # name ("leetnotes") — Click's shell-completion hooks resolve the program
 # they complete for via a PATH lookup (through `env`), so a shell function
 # or alias doesn't work here; this needs to be a real executable on PATH.

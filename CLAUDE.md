@@ -7,12 +7,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 A pipeline that syncs a user's solved LeetCode problems (via LeetCode's REST + GraphQL
 endpoints), stores them as structured JSON, renders them as Markdown notes — optionally
 mirrored into an Obsidian vault — and can prefill personal study-notes content via a
-pluggable AI provider. Driven by a `click`-based CLI (`cli.py`).
+pluggable AI provider. Driven by a `click`-based CLI (`leetnotes` via `src/leetnotes/cli/main.py`).
 
 ## Commands
 
 - Install deps: `uv sync`
-- Run the CLI: `uv run leetnotes <command> ...` (or `uv run python cli.py <command> ...`), or `uv run python -m <module>` /
+- Run the CLI: `uv run leetnotes <command> ...` (or `uv run python -m leetnotes <command> ...`), or `uv run python -m <module>` /
   `uv run python -c "..."` for one-off scripting against the library directly, e.g.:
   ```python
   from leetnotes.sync.pipeline import LeetCodeSyncManager
@@ -20,9 +20,9 @@ pluggable AI provider. Driven by a `click`-based CLI (`cli.py`).
   mgr = LeetCodeSyncManager()
   result = mgr.sync_pending_cache()
   ```
-- `uv run leetnotes -H` (or `uv run python cli.py -H`) (or `--help-all`) prints help for every command and subcommand,
+- `uv run leetnotes -H` (or `--help-all`) prints help for every command and subcommand,
   recursively, with a visible separator line between each block — the fastest way to see the
-  whole command tree at once. `uv run python cli.py <command> -h` for one command's help.
+  whole command tree at once. `uv run leetnotes <command> -h` for one command's help.
 - `shell/leetnotes` + `shell/README.md`: an optional wrapper executable + shell-completion
   setup so `leetnotes <TAB>` works from any directory (see that README for setup). Click
   generates the completion script dynamically from whatever commands are registered, so it
@@ -211,7 +211,7 @@ There's one notes file per problem regardless of style — regenerating with a d
 `--style`/`--ai` overwrites it (backing up the previous version first — see `--replace-existing`
 below) rather than creating a separate file.
 
-### CLI (`src/leetnotes/cli/`, entrypoint `cli.py`)
+### CLI (`src/leetnotes/cli/`, entrypoint `src/leetnotes/cli/main.py`)
 
 `root.py` defines the bare `cli` click group (plus `-H`/`--help-all`, the recursive help
 described above); every other module in this package registers commands onto it as a side
