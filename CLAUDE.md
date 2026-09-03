@@ -23,12 +23,10 @@ pluggable AI provider. Driven by a `click`-based CLI (`leetnotes` via `src/leetn
 - `uv run leetnotes -H` (or `--help-all`) prints help for every command and subcommand,
   recursively, with a visible separator line between each block — the fastest way to see the
   whole command tree at once. `uv run leetnotes <command> -h` for one command's help.
-- `shell/leetnotes` + `shell/README.md`: an optional wrapper executable + shell-completion
-  setup so `leetnotes <TAB>` works from any directory (see that README for setup). Click
-  generates the completion script dynamically from whatever commands are registered, so it
-  never goes stale — no code changes needed there when commands change.
-- Empty `tests/` directory for test suite (`uv run pytest`); linting configured via ruff — don't assume `pytest`,
-  `ruff`, or `mypy` are configured; check `pyproject.toml` before inventing commands.
+- Shell completion: see `docs/SHELL_COMPLETION.md` for Fish/Bash/Zsh setup so `leetnotes <TAB>`
+  works from any directory. Click generates the completion script dynamically from whatever
+  commands are registered, so it never goes stale.
+- Empty `tests/` directory for test suite (`uv run pytest`); linting configured via ruff.
 - Requires Python >=3.14 (managed via `uv`, see `uv.lock`).
 
 ## Configuration
