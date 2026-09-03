@@ -1,14 +1,5 @@
-from pathlib import Path
-from typing import ClassVar
+"""Backward-compatible settings shim. Exports `BaseProjectSettings` from `leetnotes.config`."""
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from leetnotes.config import BaseProjectSettings, find_project_root, get_resource_path
 
-
-class BaseProjectSettings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore",
-    )
-
-    PROJECT_ROOT_DIR: ClassVar[Path] = Path(__file__).resolve().parent
+__all__ = ["BaseProjectSettings", "find_project_root", "get_resource_path"]

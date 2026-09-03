@@ -12,22 +12,22 @@ pluggable AI provider. Driven by a `click`-based CLI (`cli.py`).
 ## Commands
 
 - Install deps: `uv sync`
-- Run the CLI: `uv run python cli.py <command> ...`, or `uv run python -m <module>` /
+- Run the CLI: `uv run leetnotes <command> ...` (or `uv run python cli.py <command> ...`), or `uv run python -m <module>` /
   `uv run python -c "..."` for one-off scripting against the library directly, e.g.:
   ```python
-  from modules.sync.pipeline import LeetCodeSyncManager
+  from leetnotes.sync.pipeline import LeetCodeSyncManager
 
   mgr = LeetCodeSyncManager()
   result = mgr.sync_pending_cache()
   ```
-- `uv run python cli.py -H` (or `--help-all`) prints help for every command and subcommand,
+- `uv run leetnotes -H` (or `uv run python cli.py -H`) (or `--help-all`) prints help for every command and subcommand,
   recursively, with a visible separator line between each block — the fastest way to see the
   whole command tree at once. `uv run python cli.py <command> -h` for one command's help.
 - `shell/leetnotes` + `shell/README.md`: an optional wrapper executable + shell-completion
   setup so `leetnotes <TAB>` works from any directory (see that README for setup). Click
   generates the completion script dynamically from whatever commands are registered, so it
   never goes stale — no code changes needed there when commands change.
-- No test suite and no lint/type-check config exist in this repo yet — don't assume `pytest`,
+- Empty `tests/` directory for test suite (`uv run pytest`); linting configured via ruff — don't assume `pytest`,
   `ruff`, or `mypy` are configured; check `pyproject.toml` before inventing commands.
 - Requires Python >=3.14 (managed via `uv`, see `uv.lock`).
 
@@ -41,11 +41,11 @@ a value you're actually overriding on this machine/account — secrets
 but also anything else that's genuinely personal/machine-specific (e.g. `OUTPUT_BASE_DIR`).
 Don't add a project-wide default to a committed file — if a default is worth changing for
 everyone, change the field's default in its settings class instead, like any other code change.
-`settings.py` (repo root) defines `BaseProjectSettings`, which fixes `PROJECT_ROOT_DIR` and the
+`src/leetnotes/config.py` (and root `settings.py` shim) defines `BaseProjectSettings`, which fixes `PROJECT_ROOT_DIR` and the
 shared `model_config`. Every module-level settings class subclasses it and adds its own
 `env_prefix`:
 
-- `modules/leetcode/settings.py` — `LeetCodeSettings` (`env_prefix="LEETCODE_"`): auth
+- `src/leetnotes/leetcode/settings.py` — `LeetCodeSettings` (`env_prefix="LEETCODE_"`): auth
   (`SESSION`, `CSRF_TOKEN` cookies copied from an authenticated browser session against
   leetcode.com, plus an optional `USERNAME` used only by the recent-accepted-submissions
   query), and on-disk paths under `LEETCODE_DATA/dsa_problems/` — two separate SQLite files,
@@ -54,8 +54,8 @@ shared `model_config`. Every module-level settings class subclasses it and adds 
   code, gitignored, never commit), plus `DSA_PROBLEMS_ASSETS_DIR` (`assets/`) for downloaded
   images. Keeping submissions in their own file (not just their own table) means the file
   that's safe to share can never end up carrying anyone's personal solutions — see
-  `modules/leetcode/storage/db.py`.
-- `modules/render/settings.py` — `RendererSettings`: template dir (`resources/templates/` at
+  `src/leetnotes/leetcode/storage/db.py`.
+- `src/leetnotes/render/settings.py` — `RendererSettings`: template dir (`resources/templates/` at
   the repo root), default output dir (`LOCAL_RENDER/` in the project root), and an optional
   `OUTPUT_BASE_DIR` override (no `LEETCODE_` prefix — a different env var namespace than the
   leetcode settings). Base-dir resolution priority, via `RendererSettings.resolve_base_dir()`:
@@ -64,18 +64,18 @@ shared `model_config`. Every module-level settings class subclasses it and adds 
   straight into it — there's no separate vault-mirroring mechanism. `DEFAULT_NOTES_STYLE`
   (`plain` or `obsidian`) sets the default for `notes render --style`, same override priority
   (CLI `--style` > `DEFAULT_NOTES_STYLE` (.env) > `"plain"`).
-- `modules/ai_prefill/settings.py` — `AIPrefillSettings` (`env_prefix="AI_PREFILL_"`): which
+- `src/leetnotes/ai_prefill/settings.py` — `AIPrefillSettings` (`env_prefix="AI_PREFILL_"`): which
   `AIProvider` to use (`PROVIDER`, default `claude_code` — shells out to `claude -p`, billed
   against the Claude Code subscription; `command` is a generic escape hatch for any other CLI
   AI tool), rate-limit/timeout knobs, and its own JSON store path (`ai_prefill.json`).
 
 When adding a new module that needs config, follow this same pattern: subclass
-`BaseProjectSettings` from the root `settings.py`, give it its own `env_prefix`.
+`BaseProjectSettings` from `leetnotes.config`, give it its own `env_prefix`.
 
 ## Architecture: three-part resumable sync pipeline
 
-The core design is in `modules/sync/pipeline.py` (`LeetCodeSyncManager`) — the orchestration
-layer, kept separate from `modules/leetcode/` (the data layer it coordinates: client, storage,
+The core design is in `src/leetnotes/sync/pipeline.py` (`LeetCodeSyncManager`) — the orchestration
+layer, kept separate from `src/leetnotes/leetcode/` (the data layer it coordinates: client, storage,
 parsers, image processing) so the "what to fetch and when" logic doesn't sit flat alongside the
 low-level primitives it depends on. Fetching data for one solved problem is split into three
 independent, idempotent, individually-resumable parts, because LeetCode API calls are
@@ -109,7 +109,7 @@ mode on the manager — for a free, local view of the cache, read `storage.read_
 directly instead (CLI: `problems data pending list/count/show`, vs. the always-live
 `problems data pending sync`).
 
-### Layer breakdown (`modules/leetcode/`)
+### Layer breakdown (`src/leetnotes/leetcode/`)
 
 - `client.py` — `LeetCodeClient`: thin `requests.Session` wrapper with rate limiting
   (`requests_ratelimiter`) and retry/backoff (`urllib3.Retry`) for LeetCode's REST (solved
@@ -138,18 +138,18 @@ directly instead (CLI: `problems data pending list/count/show`, vs. the always-l
   `QuestionContent` (remote/local markdown+html+text variants), `SubmissionRecord`.
 - `recent_activity.py` — pure data transforms (`filter_today`, `dedupe_latest_per_slug`) over
   the recentAcSubmissionList feed's parsed `{slug, title, timestamp}` dicts. Lives here rather
-  than in `modules/sync/` since it's plain data shaping, same category as `parsers/` — no
+  than in `src/leetnotes/sync/` since it's plain data shaping, same category as `parsers/` — no
   network/storage I/O, no orchestration.
 
-### Orchestration (`modules/sync/`)
+### Orchestration (`src/leetnotes/sync/`)
 
 - `pipeline.py` — `LeetCodeSyncManager`, the three-part sync pipeline described above. The only
-  consumer of `modules/leetcode/`'s client/storage/image-processor/parsers/models together in
-  one place; nothing in `modules/leetcode/` imports back from here. `modules/cli/` only ever
+  consumer of `src/leetnotes/leetcode/`'s client/storage/image-processor/parsers/models together in
+  one place; nothing in `src/leetnotes/leetcode/` imports back from here. `src/leetnotes/cli/` only ever
   reaches the LeetCode data layer through this manager (`cli/common.py::get_manager()`), never
-  by importing `modules/leetcode/` directly.
+  by importing `src/leetnotes/leetcode/` directly.
 
-### AI prefill (`modules/ai_prefill/`)
+### AI prefill (`src/leetnotes/ai_prefill/`)
 
 Generates the personal study-notes content (core idea, invariant, trap, recognition clue, ...)
 via a pluggable CLI AI tool, instead of leaving it fully blank for hand-writing. Deliberately
@@ -175,7 +175,7 @@ even if one exists). `notes render --ai` pulls the latest stored version in when
 notes file, generating one first if none exists yet; `--regenerate-ai` always generates a fresh
 version first (implies `--ai`).
 
-### Rendering (`modules/render/`)
+### Rendering (`src/leetnotes/render/`)
 
 `markdown_problem.py` (`LeetCodeDSAProblemMarkdownRender`) turns a `ProblemRecord`/
 `CombinedQuestionRecord` into a single Markdown file via
@@ -194,7 +194,7 @@ deduped) plus a link back to the rendered problem/solution file; the content sec
 the latest AI prefill content when rendered with `--ai` (see AI prefill above — the CLI's `notes render`
 generates prefill content on demand if none exists yet, so `PrefillMissingError` is only ever
 raised by lower-level, direct use of `LeetCodeDSAProblemNotesRender.render()`). Two base styles
-(`modules/render/utils.py::NotesStyle`: `plain`, `obsidian`), each with a `+ai` variant
+(`src/leetnotes/render/utils.py::NotesStyle`: `plain`, `obsidian`), each with a `+ai` variant
 (`AI_STYLE` in the same module maps base -> `+ai`) — the CLI exposes these as independent
 `--style {plain,obsidian}` + `--ai` flags rather than four separate style choices. Both styles
 link to the same single problem file — `obsidian` via `[[wikilink]]` (path relative to
@@ -211,11 +211,11 @@ There's one notes file per problem regardless of style — regenerating with a d
 `--style`/`--ai` overwrites it (backing up the previous version first — see `--replace-existing`
 below) rather than creating a separate file.
 
-### CLI (`modules/cli/`, entrypoint `cli.py`)
+### CLI (`src/leetnotes/cli/`, entrypoint `cli.py`)
 
 `root.py` defines the bare `cli` click group (plus `-H`/`--help-all`, the recursive help
 described above); every other module in this package registers commands onto it as a side
-effect of being imported by `modules/cli/__init__.py`. Every batch (`--all`) command shares
+effect of being imported by `src/leetnotes/cli/__init__.py`. Every batch (`--all`) command shares
 `common.py`'s `CircuitBreaker` (abort after N consecutive failures) and (in `problems_data.py`)
 `BatchPacer` (randomized cooldown every N slugs) so a large run doesn't look like abusive
 traffic; commands invoked with neither `SLUG` nor `--all` fall back to `picker.py`'s fuzzy

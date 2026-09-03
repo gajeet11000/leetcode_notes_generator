@@ -111,7 +111,7 @@ The one command you'll use most is `notes render`. Run it with no arguments
 and it will show you a searchable list of your solved problems to pick from:
 
 ```bash
-uv run python cli.py notes render
+uv run leetnotes notes render
 ```
 
 - Type to search, `Tab` to select more than one, `Enter` to confirm.
@@ -125,11 +125,11 @@ uv run python cli.py notes render
 
 | I want to...                                            | Run this                              |
 |----------------------------------------------------------|----------------------------------------|
-| Pick problems from a searchable list                      | `uv run python cli.py notes render`   |
-| Generate notes for one specific problem                   | `uv run python cli.py notes render two-sum` |
-| Generate notes for *every* solved problem (first-time setup) | `uv run python cli.py notes render --all` |
-| Catch up on problems solved recently                      | `uv run python cli.py notes render --recent` |
-| Catch up on problems solved just today                    | `uv run python cli.py notes render --today` |
+| Pick problems from a searchable list                      | `uv run leetnotes notes render`       |
+| Generate notes for one specific problem                   | `uv run leetnotes notes render two-sum` |
+| Generate notes for *every* solved problem (first-time setup) | `uv run leetnotes notes render --all` |
+| Catch up on problems solved recently                      | `uv run leetnotes notes render --recent` |
+| Catch up on problems solved just today                    | `uv run leetnotes notes render --today` |
 
 Problem names above (like `two-sum`) come from the last part of the
 problem's LeetCode URL, e.g. `leetcode.com/problems/two-sum/` → `two-sum`.
@@ -145,7 +145,7 @@ hand is a lot of typing. Add `--ai` to have an AI take a first pass at those
 sections for you, which you can then read over and adjust:
 
 ```bash
-uv run python cli.py notes render --ai
+uv run leetnotes notes render --ai
 ```
 
 By default this uses Claude Code itself to write the draft, so if you're
@@ -168,27 +168,29 @@ Add that line to your `.env` file, then add `--style obsidian` (or set
 time):
 
 ```bash
-uv run python cli.py notes render --style obsidian
+uv run leetnotes notes render --style obsidian
 ```
 
-## Other handy commands
+### Checking what's in your local database
 
 ```bash
-uv run python cli.py problems list              # see everything you've saved so far
-uv run python cli.py problems count              # just the total count
-uv run python cli.py problems show two-sum       # see everything stored for one problem
-uv run python cli.py problems recent             # what LeetCode says you solved recently
-uv run python cli.py problems delete two-sum     # remove a problem (and its solution) entirely
-uv run python cli.py problems delete-submission two-sum   # keep the problem, just remove the saved solution code
+uv run leetnotes problems list              # see everything you've saved so far
+uv run leetnotes problems count             # just the total count
+uv run leetnotes problems show two-sum      # see everything stored for one problem
+uv run leetnotes problems recent            # what LeetCode says you solved recently
+uv run leetnotes problems delete two-sum    # remove a problem (and its solution) entirely
+uv run leetnotes problems delete-submission two-sum  # keep the problem, just remove the saved solution code
 ```
 
-Every command and option can be listed at any time with `-h`:
+### Getting help
 
 ```bash
-uv run python cli.py -h                # top-level commands
-uv run python cli.py notes render -h   # options for one specific command
-uv run python cli.py -H                # everything, all at once
+uv run leetnotes -h                # top-level commands
+uv run leetnotes notes render -h   # options for one specific command
+uv run leetnotes -H                # everything, all at once
 ```
+
+*(Note: `uv run python cli.py` also works as a backwards-compatible alias.)*
 
 ## Where your files end up
 
