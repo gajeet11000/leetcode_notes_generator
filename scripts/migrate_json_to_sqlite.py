@@ -15,11 +15,11 @@ Run once: uv run python scripts/migrate_json_to_sqlite.py
 import json
 from pathlib import Path
 
-from leetnotes.ai_prefill.schema import PrefillContent
-from leetnotes.ai_prefill.storage import AIPrefillStorage
-from leetnotes.leetcode.models import ProblemRecord, SubmissionRecord
-from leetnotes.leetcode.settings import leetcode_settings
-from leetnotes.leetcode.storage import LeetCodeDSAStorage
+from leetnotes_core.ai_prefill.schema import PrefillContent
+from leetnotes_core.ai_prefill.storage import AIPrefillStorage
+from leetnotes_core.leetcode.models import ProblemRecord, SubmissionRecord
+from leetnotes_core.leetcode.settings import leetcode_settings
+from leetnotes_core.leetcode.storage import LeetCodeDSAStorage
 
 DATA_DIR = leetcode_settings.PROBLEMS_DATA_DIR
 BACKUP_DIR = DATA_DIR / "_json_backup"

@@ -17,9 +17,9 @@ inputs.
 Run once: uv run python -m scripts.rebake_local_image_paths
 """
 
-from leetnotes.leetcode import parsers
-from leetnotes.leetcode.image_processor import LeetCodeImageProcessor
-from leetnotes.leetcode.storage import LeetCodeDSAStorage
+from leetnotes_core.leetcode import parsers
+from leetnotes_core.leetcode.image_processor import LeetCodeImageProcessor
+from leetnotes_core.leetcode.storage import LeetCodeDSAStorage
 
 
 def main() -> None:
