@@ -3,9 +3,8 @@ import logging.handlers
 import sys
 
 import structlog
-from pydantic_settings import SettingsConfigDict
-
 from leetnotes_core.config import BaseProjectSettings
+from pydantic_settings import SettingsConfigDict
 
 LOG_DIR = BaseProjectSettings.PROJECT_ROOT_DIR / "logs"
 

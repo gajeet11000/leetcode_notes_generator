@@ -1,9 +1,9 @@
 """Main CLI entrypoint for leetnotes_core."""
 
 from leetnotes_core.leetcode.client import LeetCodeAuthenticationError
-from leetnotes_core.logging_config import configure_logging
 
 from leetnotes_cli import cli
+from leetnotes_cli.logging import configure_logging
 
 PROG_NAME = "leetnotes"
 

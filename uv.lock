@@ -241,6 +241,7 @@ dependencies = [
     { name = "click" },
     { name = "inquirerpy" },
     { name = "leetnotes-core" },
+    { name = "structlog" },
 ]
 
 [package.metadata]
@@ -248,6 +249,7 @@ requires-dist = [
     { name = "click", specifier = ">=8.4.2" },
     { name = "inquirerpy", specifier = ">=0.3.4" },
     { name = "leetnotes-core", editable = "packages/leetnotes-core" },
+    { name = "structlog", specifier = ">=26.1.0" },
 ]
 
 [[package]]

@@ -26,6 +26,7 @@ dependencies = [
     "leetnotes-core",
     "click>=8.4.2",
     "inquirerpy>=0.3.4",
+    "structlog>=26.1.0",
 ]
 
 [project.scripts]
