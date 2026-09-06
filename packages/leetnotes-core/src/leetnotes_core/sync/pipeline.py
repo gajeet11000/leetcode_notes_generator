@@ -219,9 +219,22 @@ class LeetCodeSyncManager:
         no-op — unless the pending cache has the 'submission' part marked as
         outstanding (see reconcile_recent_accepted), in which case it's
         refetched regardless.
+
+        If the submission is pinned, skip fetching entirely.
         """
         with structlog.contextvars.bound_contextvars(slug=slug, stage="submission"):
             existing_submission = self.storage.submissions_get_by_slug(slug)
+
+            # Check if submission is pinned - if so, skip fetching entirely
+            if existing_submission is not None:
+                pin_status = self.storage.submissions_get_pin_status(slug)
+                if pin_status:
+                    logger.info(
+                        "submission_pin_skipped",
+                        lang=existing_submission.lang if existing_submission else "unknown",
+                        submission_date=str(existing_submission.submission_date) if existing_submission else "unknown",
+                    )
+                    return False
 
             # The pending cache can say "submission" is outstanding even though
             # a submission record already exists — e.g. reconcile_recent_accepted
@@ -272,7 +285,9 @@ class LeetCodeSyncManager:
             submission_record = SubmissionRecord(slug=slug, **submission_data)
 
             self.storage.submissions_add_or_update(submission_record)
-            self.storage.mark_part_fetched(slug, "submission")
+            # Only mark as fetched if not pinned (though we already checked above)
+            if not self.storage.submissions_get_pin_status(slug):
+                self.storage.mark_part_fetched(slug, "submission")
 
             logger.info("submission_fetch_succeeded", lang=submission_record.lang)
             return True
@@ -352,7 +367,9 @@ class LeetCodeSyncManager:
                 stale_submission_slugs.append(slug)
 
         for slug in stale_submission_slugs:
-            self.storage.reopen_part(slug, "submission")
+            # Only reopen submission part if not pinned
+            if not self.storage.submissions_get_pin_status(slug):
+                self.storage.reopen_part(slug, "submission")
 
         log.info(
             "recent_accepted_reconciled",

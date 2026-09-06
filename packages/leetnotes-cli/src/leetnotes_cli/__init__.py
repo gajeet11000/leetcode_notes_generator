@@ -13,6 +13,7 @@ from . import (  # noqa: F401  (side effect: registers commands onto `cli`)
     problems_db,
     problems_recent,
     problems_render,
+    problems_pin,
 )
 from .root import cli
 

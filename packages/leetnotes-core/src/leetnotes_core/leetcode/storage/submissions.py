@@ -121,3 +121,46 @@ class SubmissionStorage:
         ]
         logger.info("submissions_counted", count=total)
         return total
+
+    def get_pin_status(self, slug: str) -> bool:
+        """Returns the pin status for a submission. Defaults to False if not found."""
+        log = logger.bind(slug=slug)
+        row = self.conn.execute(
+            "SELECT pin FROM submissions WHERE slug = ?", (slug,)
+        ).fetchone()
+        if row is None:
+            log.info("submission_pin_status_not_found", default=False)
+            return False
+        pin_status = bool(row["pin"])
+        log.info("submission_pin_status_found", pin=pin_status)
+        return pin_status
+
+    def set_pin_status(self, slug: str, pin: bool) -> bool:
+        """Sets the pin status for a submission. Returns True if updated."""
+        log = logger.bind(slug=slug, pin=pin)
+        # First check if the submission exists
+        existing = self.conn.execute(
+            "SELECT 1 FROM submissions WHERE slug = ?", (slug,)
+        ).fetchone()
+        if existing is None:
+            log.info("submission_pin_status_set_skipped", reason="not_found")
+            return False
+
+        with self.conn:
+            self.conn.execute(
+                "UPDATE submissions SET pin = ? WHERE slug = ?", (int(pin), slug)
+            )
+        log.info("submission_pin_status_set")
+        return True
+
+    def toggle_pin(self, slug: str) -> bool:
+        """Toggles the pin status for a submission. Returns the new pin status."""
+        log = logger.bind(slug=slug)
+        current_pin = self.get_pin_status(slug)
+        new_pin = not current_pin
+        success = self.set_pin_status(slug, new_pin)
+        if success:
+            log.info("submission_pin_toggled", old_pin=current_pin, new_pin=new_pin)
+        else:
+            log.info("submission_pin_toggle_failed", reason="not_found")
+        return new_pin if success else current_pin

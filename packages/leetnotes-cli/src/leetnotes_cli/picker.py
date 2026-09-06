@@ -52,6 +52,41 @@ def pick_slugs(
     return result if isinstance(result, list) else [result]
 
 
+def pick_records(
+    candidates: list[tuple[str, str]],
+    *,
+    message: str = PICK_MESSAGE,
+    multiselect: bool = True,
+) -> list[str]:
+    """
+    Interactive fuzzy search + (multi)select over `candidates` — a list of
+    (slug, label) pairs, where `label` is what's shown and searched.
+
+    Returns the chosen slug(s) in selection order, or [] if there was
+    nothing to pick from, or the user backed out (Ctrl-C / Esc / confirmed
+    with nothing selected).
+    """
+    if not candidates:
+        return []
+
+    choices = [Choice(value=slug, name=label) for slug, label in candidates]
+    try:
+        result = FuzzyPrompt(
+            message=message,
+            choices=choices,
+            multiselect=multiselect,
+            max_height="70%",
+            mandatory=False,
+            raise_keyboard_interrupt=False,
+        ).execute()
+    except KeyboardInterrupt:
+        return []
+
+    if result is None:
+        return []
+    return result if isinstance(result, list) else [result]
+
+
 def label_records(records: list[CombinedQuestionRecord]) -> list[tuple[str, str]]:
     """(slug, label) pairs for records that already have problem data (title, difficulty, ...)."""
     return [

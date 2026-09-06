@@ -178,6 +178,18 @@ class LeetCodeDSAStorage:
         """Returns total number of stored submissions."""
         return self.submissions.count()
 
+    def submissions_get_pin_status(self, slug: str) -> bool:
+        """Returns the pin status for a submission."""
+        return self.submissions.get_pin_status(slug)
+
+    def submissions_set_pin_status(self, slug: str, pin: bool) -> bool:
+        """Sets the pin status for a submission."""
+        return self.submissions.set_pin_status(slug, pin)
+
+    def submissions_toggle_pin(self, slug: str) -> bool:
+        """Toggles the pin status for a submission."""
+        return self.submissions.toggle_pin(slug)
+
     # -------------------------------------------------------------------
     # Solved-slugs pending cache (unchanged behavior, delegated to PendingCacheStore)
     # -------------------------------------------------------------------
